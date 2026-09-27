@@ -3,7 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const taskRouter = require("./Routers/taskRouter")
 const cors = require('cors');
-const DB_PATH = "mongodb+srv://khuxxhi444_db_user:9vdTTlH7xXeeh93z@ferrox.ocin5yt.mongodb.net/todoList?appName=ferrox";
+const DB_PATH = "mongodb+srv://<userName>:<password>@ferrox.ocin5yt.mongodb.net/<database>?appName=ferrox";
 const app = express();
 app.use(cors());
 app.use(express.json());
