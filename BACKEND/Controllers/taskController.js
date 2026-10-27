@@ -1,76 +1,129 @@
 const Task = require("../model/task");
 
-//controller to add tasks
+// Controller to add tasks
+exports.postAddTask = async (req, res, next) => {
+    try {
+        const { title, note, dateDeadline, timeDeadline } = req.body;
+        if (!title || !title.trim()) {
+            return res.status(400).json({ message: "Task title is required." });
+        }
 
-exports.postAddTask = async (req, res) => {
-    //req will come with title, date-deadline, time-deadline, note
-    const title = req.body.title;
-    const note = req.body.note;
-    const deadline = new Date(`${req.body.dateDeadline}T${req.body.timeDeadline}`);
-    const task = new Task({
-        title: title,
-        deadline: deadline,
-        note: note,
-        Completed: false
-    })
-    console.log("The data which is going to be saved on the database is : \n ", task);
-    const existingTask = await Task.findOne({
-        title: title,
-        deadline: deadline
-    })
-    if (existingTask) {
-        return res.status(409).json({
-            message: "Task already exist"
-        })
-    } else {
+        let deadline = null;
+        if (dateDeadline && timeDeadline) {
+            const parsedDate = new Date(`${dateDeadline}T${timeDeadline}`);
+            if (!isNaN(parsedDate.getTime())) {
+                deadline = parsedDate;
+            }
+        }
+
+        const task = new Task({
+            title: title.trim(),
+            deadline: deadline,
+            note: note || "",
+            Completed: false
+        });
+
+        const existingTask = await Task.findOne({
+            title: task.title,
+            deadline: deadline
+        });
+
+        if (existingTask) {
+            return res.status(409).json({
+                message: "Task already exists."
+            });
+        }
+
         await task.save();
-        res.status(201).json({
-            message: "Task added successfully",
+        return res.status(201).json({
+            message: "Task added successfully.",
             task: task
         });
+    } catch (err) {
+        console.error("Error in postAddTask:", err);
+        return res.status(500).json({
+            message: "Failed to add task.",
+            error: err.message
+        });
     }
-}
+};
 
-//controller to delete task
-exports.getDeleteTask = async (req, res) => {
-    // i will get the task to delete it 
-    const del_Id = req.params.id;
-    const task = await Task.findById(del_Id);
-    if (task) {
-        await Task.findByIdAndDelete(del_Id);
+// Controller to delete task (supports both DELETE and legacy GET)
+const deleteTask = async (req, res, next) => {
+    try {
+        const del_Id = req.params.id;
+        const task = await Task.findByIdAndDelete(del_Id);
+        if (!task) {
+            return res.status(404).json({
+                message: "Task not found."
+            });
+        }
         return res.json({
-            message: "Task delete successfully."
-        })
+            message: "Task deleted successfully.",
+            id: del_Id
+        });
+    } catch (err) {
+        console.error("Error in deleteTask:", err);
+        if (err.name === "CastError") {
+            return res.status(400).json({ message: "Invalid task ID format." });
+        }
+        return res.status(500).json({
+            message: "Failed to delete task.",
+            error: err.message
+        });
     }
-    return res.status(404).json({
-        message: "Task not found."
-    })
-}
+};
 
-//controller to update task
-exports.postUpdateTask = async (req, res) => {
-    //i will get the task to update it 
-    const title = req.body.title;
-    const deadline = req.body.deadline;
-    const note = req.body.note;
-    const id = req.params.id;
-    const Completed = req.body.Completed;
-    const uptask = await Task.findByIdAndUpdate(id, {
-        title: title, deadline: deadline, note: note, Completed: Completed
-    }, {
-        new: true
-    })
-    if (!uptask) {
-        return res.status(404).json({
-            message: "Task not found."
-        })
+exports.deleteTask = deleteTask;
+exports.getDeleteTask = deleteTask; // backward compatibility
+
+// Controller to update task
+exports.postUpdateTask = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const { title, deadline, note, Completed } = req.body;
+
+        const updateFields = {};
+        if (title !== undefined) updateFields.title = title;
+        if (deadline !== undefined) updateFields.deadline = deadline;
+        if (note !== undefined) updateFields.note = note;
+        if (Completed !== undefined) updateFields.Completed = Completed;
+
+        const uptask = await Task.findByIdAndUpdate(
+            id,
+            updateFields,
+            { new: true, runValidators: true }
+        );
+
+        if (!uptask) {
+            return res.status(404).json({
+                message: "Task not found."
+            });
+        }
+
+        return res.json(uptask);
+    } catch (err) {
+        console.error("Error in postUpdateTask:", err);
+        if (err.name === "CastError") {
+            return res.status(400).json({ message: "Invalid task ID format." });
+        }
+        return res.status(500).json({
+            message: "Failed to update task.",
+            error: err.message
+        });
     }
-    res.json(uptask);
-}
+};
 
-//controller to fetch all tasks
-exports.getAllTasks = async (req, res) => {
-    const taskList = await Task.find();
-    console.log("The task list : \n", taskList);
-    res.json(taskList);
-}
+// Controller to fetch all tasks
+exports.getAllTasks = async (req, res, next) => {
+    try {
+        const taskList = await Task.find().sort({ deadline: 1 });
+        return res.json(taskList);
+    } catch (err) {
+        console.error("Error in getAllTasks:", err);
+        return res.status(500).json({
+            message: "Failed to fetch tasks.",
+            error: err.message
+        });
+    }
+};
