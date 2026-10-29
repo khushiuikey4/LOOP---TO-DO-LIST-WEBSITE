@@ -7,6 +7,8 @@ const NewTaskForm = ({ onCancel, handleUpdateToggle, fetchTasks, handleTaskForm,
     const [timeDeadline, setTimeDeadline] = useState("");
     const [note, setNote] = useState("");
     const [Completed, setCompleted] = useState(false);
+    const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     useEffect(() => {
         if (updateReq) {
             setTitle(updateData.title);
@@ -26,28 +28,30 @@ const NewTaskForm = ({ onCancel, handleUpdateToggle, fetchTasks, handleTaskForm,
             </h2>
 
             <form className="space-y-4" onSubmit={async (e) => {
-                if (updateReq) {
-                    const response = await handleUpdateToServer(e, updateData.id, updateData.Completed);
-                    if (response.ok) {
+                setError("");
+                setIsSubmitting(true);
+                try {
+                    if (updateReq) {
+                        await handleUpdateToServer(e, updateData.id, updateData.Completed);
                         setTitle("");
                         setDateDeadline("");
                         setTimeDeadline("");
                         setNote("");
                         setCompleted(false);
                         handleUpdateToggle();
-
-                    }
-                } else {
-                    const response = await handleAddToServer(e);
-                    if (response.ok) {
+                    } else {
+                        await handleAddToServer(e);
                         setTitle("");
                         setDateDeadline("");
                         setTimeDeadline("");
                         setNote("");
                         setCompleted(false);
                         handleTaskForm();
-
                     }
+                } catch (err) {
+                    setError(err.message || "Could not save this task. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
                 }
             }}>
 
@@ -153,6 +157,10 @@ const NewTaskForm = ({ onCancel, handleUpdateToggle, fetchTasks, handleTaskForm,
                 </div>
 
 
+                {error && (
+                    <p className="text-sm font-medium text-[#C05A3D]">{error}</p>
+                )}
+
                 {/* Buttons */}
                 <div className="flex gap-3 pt-2">
 
@@ -179,6 +187,7 @@ const NewTaskForm = ({ onCancel, handleUpdateToggle, fetchTasks, handleTaskForm,
 
                     <button
                         type="submit"
+                        disabled={isSubmitting}
                         className=" 
                             flex-1 
                             cursor-pointer 

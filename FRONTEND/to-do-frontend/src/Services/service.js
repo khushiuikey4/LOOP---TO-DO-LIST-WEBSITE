@@ -1,5 +1,19 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+const PRODUCTION_API_URL = "https://loop-to-do-list-website.onrender.com";
 
+const API_BASE_URL = (
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD ? PRODUCTION_API_URL : "http://localhost:3000")
+).replace(/\/$/, "");
+
+const parseErrorMessage = async (response, fallback) => {
+    try {
+        const data = await response.json();
+        return data.message || fallback;
+    } catch {
+        return fallback;
+    }
+};
+//dhdiofbhidhdh
 export const handleAddToServer = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -18,6 +32,9 @@ export const handleAddToServer = async (e) => {
         },
         body: JSON.stringify(taskData)
     });
+    if (!response.ok) {
+        throw new Error(await parseErrorMessage(response, "Failed to add task."));
+    }
     return response;
 };
 
@@ -66,6 +83,9 @@ export const handleUpdateToServer = async (e, id, Comp) => {
         },
         body: JSON.stringify(taskData)
     });
+    if (!response.ok) {
+        throw new Error(await parseErrorMessage(response, "Failed to update task."));
+    }
     return response;
 };
 
