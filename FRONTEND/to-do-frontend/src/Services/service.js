@@ -13,7 +13,7 @@ const parseErrorMessage = async (response, fallback) => {
         return fallback;
     }
 };
-//dhdiofbhidhdh
+//
 export const handleAddToServer = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
